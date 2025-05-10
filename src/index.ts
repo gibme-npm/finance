@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024, Brandon Lehmann <brandonlehmann@gmail.com>
+// Copyright (c) 2023-2025, Brandon Lehmann <brandonlehmann@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -389,6 +389,137 @@ export const calculate_simple_interest_loan = (
     };
 };
 
+/**
+ * Calculate the Linearly Weighted Moving Average (LWMA) of the values provided
+ *
+ * @param values
+ * @param period
+ * @param decimals
+ */
+export const calculate_lwma = (
+    values: number[],
+    period: number,
+    decimals = 2
+): number[] => {
+    if (values.length < period) {
+        throw new Error('Not enough data points to calculate LWMA');
+    }
+
+    const lwma: number[] = [];
+    const weight_sum = (period * (period + 1)) / 2;
+
+    for (let i = 0; i <= values.length - period; ++i) {
+        let weighted_sum = 0;
+
+        for (let j = 0; j < period; ++j) {
+            weighted_sum += values[i + j] * (j + 1);
+        }
+
+        lwma.push(weighted_sum / weight_sum);
+    }
+
+    return lwma.map(elem => toMoney(elem, decimals));
+};
+
+/**
+ * Calculate the Simple Moving Average (SMA) of the values provided
+ *
+ * @param values
+ * @param period
+ * @param decimals
+ */
+export const calculate_sma = (
+    values: number[],
+    period: number,
+    decimals = 2
+): number[] => {
+    if (values.length < period) {
+        throw new Error('Not enough data points to calculate SMA');
+    }
+
+    const sma: number[] = [];
+
+    for (let i = 0; i <= values.length - period; ++i) {
+        sma.push(values.slice(i, i + period).reduce((a, b) => a + b, 0) / period);
+    }
+
+    return sma.map(elem => toMoney(elem, decimals));
+};
+
+/**
+ * Calculate the Exponential Moving Average (EMA) of the values provided
+ *
+ * @param values
+ * @param period
+ * @param decimals
+ */
+export const calculate_ema = (
+    values: number[],
+    period: number,
+    decimals = 2
+): number[] => {
+    if (values.length < period) {
+        throw new Error('Not enough data points to calculate EMA');
+    }
+
+    const multiplier = 2 / (period + 1);
+
+    const ema: number[] = [];
+
+    ema.push(values.slice(0, period).reduce((a, b) => a + b, 0) / period);
+
+    for (let i = period; i < values.length; ++i) {
+        const current_ema = (values[i] - ema[ema.length - 1]) * multiplier + ema[ema.length - 1];
+
+        ema.push(current_ema);
+    }
+
+    return ema.map(elem => toMoney(elem, decimals));
+};
+
+/**
+ * Calculate the Exponentially Weighted Moving Average (EWMA) of the values
+ *
+ * @param values
+ * @param lambda higher values for lambda put more weight on recent values
+ * @param decimals
+ */
+export const calculate_ewma = (
+    values: number[],
+    lambda = 0.5,
+    decimals = 2
+): number[] => {
+    if (values.length === 0) return [0];
+
+    const ewma: number[] = [values[0]];
+
+    for (let i = 1; i < values.length; ++i) {
+        ewma.push(lambda * values[i] + (1 - lambda) * ewma[i - 1]);
+    }
+
+    return ewma.map(elem => toMoney(elem, decimals));
+};
+
+/**
+ * Calculate the Cumulative Moving Average (CMA) of the values provided
+ *
+ * @param values
+ * @param decimals
+ */
+export const calculate_cma = (values: number[], decimals = 2): number[] => {
+    if (values.length === 0) return [0];
+
+    const cma: number[] = [];
+    let sum = 0;
+
+    for (let i = 0; i < values.length; ++i) {
+        sum += values[i];
+        cma.push(sum / (i + 1));
+    }
+
+    return cma.map(elem => toMoney(elem, decimals));
+};
+
 export default {
     calculate_amortization_loan,
     calculate_amortization_payment,
@@ -400,5 +531,10 @@ export default {
     calculate_present_value_from_future_value,
     calculate_principal_from_amortization_payment,
     calculate_simple_interest,
-    calculate_simple_interest_loan
+    calculate_simple_interest_loan,
+    calculate_lwma,
+    calculate_sma,
+    calculate_ema,
+    calculate_ewma,
+    calculate_cma
 };
